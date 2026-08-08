@@ -1,16 +1,18 @@
 import mysql.connector
+from rich.console import Console
 
-try:
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="12345",
-        database="vehicle_rental_system"
-    )
+console = Console()
 
-    cursor = conn.cursor()
+conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="12345",
+    database="vehicle_rental_system"
+)
 
-    print("Database Connected Successfully!")
+cursor = conn.cursor()
 
-except mysql.connector.Error as err:
-    print("Database Connection Error:", err)
+console.print(
+    "[bold green]✓ Database Connected Successfully![/bold green]"
+)
+
