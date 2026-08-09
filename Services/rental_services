@@ -2,6 +2,7 @@ from db_conn import conn,cursor
 from Models.rental import rental
 from Models.payment import Payment
 from datetime import date
+from Services.payment_services import *
 
 
 
@@ -18,119 +19,196 @@ console = Console()
  
 
  
+
+
+
+
 def rent_vehicle(customer_id):
 
-   console.print(Panel.fit("[bold cyan]RENT VEHICLE[/bold cyan]"))
-   vehicle_id = int(input("Enter Vehicle ID: "))
-   rent_date = input("Enter Rent Date (YYYY-MM-DD): ")
-   return_date = input("Enter Return Date (YYYY-MM-DD): ")
-   rent_date_obj=date.fromisoformat(rent_date)
-   return_date_obj=date.fromisoformat(return_date)
-   total_days=(return_date_obj-rent_date_obj).days
-   console.print("Total Days :",total_days)
-    
-    
-   if total_days <= 0:
-       console.print("❌ Number of days must be greater than 0.", style="bold red")
-       return
-   #Check vehicle availability
-   query = """
-   SELECT rent_per_day
-   FROM vehicle
-   WHERE vehicle_id=%s
-   AND status='Available'
-   """
-   cursor.execute(query, (vehicle_id,))
-   vehicle = cursor.fetchone()
-   if vehicle is None:
-        console.print("❌ Vehicle is not available!", style="bold red")
+    console.print(
+        Panel.fit(
+            "[bold cyan]RENT VEHICLE[/bold cyan]",
+            border_style="cyan"
+        )
+    )
+
+    vehicle_id = int(input("Enter Vehicle ID: "))
+
+    rent_date = input("Enter Rent Date (YYYY-MM-DD): ")
+    return_date = input("Enter Return Date (YYYY-MM-DD): ")
+
+    # Convert string to date
+    rent_date_obj = date.fromisoformat(rent_date)
+    return_date_obj = date.fromisoformat(return_date)
+
+    # Calculate total days
+    total_days = (return_date_obj - rent_date_obj).days
+
+    console.print(f"Total Days : {total_days}")
+
+    if total_days <= 0:
+        console.print(
+            "❌ Number of days must be greater than 0.",
+            style="bold red"
+        )
         return
-   rent_per_day = float(vehicle[0])
-   total_amount = rent_per_day * total_days
 
-   console.print(f"\nTotal Amount to Pay : ₹{total_amount}", style="bold yellow")
-   payment_method = input("Enter Payment Method (Cash/UPI/Card): ")
+    # Check vehicle availability
+    query = """
+        SELECT rent_per_day
+        FROM vehicle
+        WHERE vehicle_id = %s
+        AND status = 'Available'
+    """
 
-   #Create rental object
-   rental1 = rental(
-       customer_id,
-       vehicle_id,
-       rent_date,
-       return_date,
-       total_days,
-       total_amount,
-       "Active"
-   )
-   rental_query = """
-   INSERT INTO rental
-   (customer_id, vehicle_id, rent_date,
-   return_date, total_days,
-   total_amount, rental_status)
-   VALUES (%s,%s,%s,%s,%s,%s,%s)
-   """
+    cursor.execute(query, (vehicle_id,))
+    vehicle = cursor.fetchone()
 
-   rental_values = (
-       rental1.customer_id,
-       rental1.vehicle_id,
-       rental1.rent_date,
-       rental1.return_date,
-       rental1.total_days,
-       rental1.total_amount,
-       rental1.rental_status)
+    if vehicle is None:
+        console.print(
+            "❌ Vehicle is not available!",
+            style="bold red"
+        )
+        return
 
-   cursor.execute(rental_query, rental_values)
+    rent_per_day = float(vehicle[0])
 
-   #Get generated Rental ID
-   rental_id = cursor.lastrowid
-   #Create payment object
-   payment = Payment(
-       rental_id,
-       date.today(),
-       total_amount,
-       payment_method,
-       "Paid"
+    # Calculate total amount
+    total_amount = rent_per_day * total_days
+
+    console.print(
+        f"\nTotal Amount to Pay : ₹{total_amount}",
+        style="bold yellow"
     )
-   payment_query = """
-   INSERT INTO payment
-   (rental_id, payment_date, amount,
-    payment_method, payment_status)
-   VALUES (%s,%s,%s,%s,%s)
-   """
-   payment_values = (
-       payment.rental_id,
-       payment.payment_date,
-       payment.amount,
-       payment.payment_method,
-       payment.payment_status
-    )
-   cursor.execute(payment_query, payment_values)
-   #Update vehicle status
-   cursor.execute(
-       """
-       UPDATE vehicle
-       SET status='Rented'
-       WHERE vehicle_id=%s
-       """,
-       (vehicle_id,)
-    )
-   conn.commit()
 
-   console.print(
-       Panel.fit(
-           f"""
+    # Payment method
+    payment_method = input(
+        "Enter Payment Method (Cash/UPI/Card): "
+    )
+
+    # Validate payment method
+    payment_method = payment_method.capitalize()
+
+    if payment_method not in ["Cash", "Upi", "Card"]:
+        console.print(
+            "❌ Invalid payment method!",
+            style="bold red"
+        )
+        return
+
+    if payment_method == "Upi":
+        payment_method = "UPI"
+
+    try:
+
+        # -----------------------------
+        # CREATE RENTAL
+        # -----------------------------
+
+        rental1 = rental(
+            customer_id,
+            vehicle_id,
+            rent_date,
+            return_date,
+            total_days,
+            total_amount,
+            "Active"
+        )
+
+        rental_query = """
+            INSERT INTO rental
+            (
+                customer_id,
+                vehicle_id,
+                rent_date,
+                return_date,
+                total_days,
+                total_amount,
+                rental_status
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+        """
+
+        rental_values = (
+            rental1.customer_id,
+            rental1.vehicle_id,
+            rental1.rent_date,
+            rental1.return_date,
+            rental1.total_days,
+            rental1.total_amount,
+            rental1.rental_status
+        )
+
+        cursor.execute(rental_query, rental_values)
+
+        # Get generated Rental ID
+        rental_id = cursor.lastrowid
+
+        # -----------------------------
+        # MAKE PAYMENT
+        # -----------------------------
+
+        payment_success = make_payment(
+            rental_id,
+            payment_method,
+            "Paid"
+        )
+
+        if not payment_success:
+            conn.rollback()
+
+            console.print(
+                "❌ Payment failed. Rental cancelled.",
+                style="bold red"
+            )
+            return
+
+        # -----------------------------
+        # UPDATE VEHICLE STATUS
+        # -----------------------------
+
+        update_query = """
+            UPDATE vehicle
+            SET status = 'Rented'
+            WHERE vehicle_id = %s
+        """
+
+        cursor.execute(update_query, (vehicle_id,))
+
+        # Commit everything
+        conn.commit()
+
+        # -----------------------------
+        # RECEIPT
+        # -----------------------------
+
+        console.print(
+            Panel.fit(
+                f"""
 [bold green]Vehicle Rented Successfully![/bold green]
 
 Rental ID      : {rental_id}
 Vehicle ID     : {vehicle_id}
+Rent Date      : {rent_date}
+Return Date    : {return_date}
+Total Days     : {total_days}
 Amount Paid    : ₹{total_amount}
 Payment Method : {payment_method}
 Payment Status : Paid
 """,
-            title="Rental Receipt",
-             border_style="green"
-         )
-     )
+                title="Rental Receipt",
+                border_style="green"
+            )
+        )
 
+    except Exception as e:
+
+        conn.rollback()
+
+        console.print(
+            f"❌ Rental failed: {e}",
+            style="bold red"
+        )
  
 #---------------- VIEW MY RENTALS ---------------- #
  
