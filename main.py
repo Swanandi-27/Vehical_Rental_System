@@ -3,24 +3,31 @@ from Services.Customer_services import (
     customer_login
 )
 
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
+
 
 def main():
 
     while True:
 
-        print("""
-==================================================
-          VEHICLE RENTAL MANAGEMENT SYSTEM
-==================================================
+        console.print(
+            Panel(
+                """
+[bold cyan]1. Customer Register[/bold cyan]
+[bold yellow]2. Customer Login[/bold yellow]
+[bold red]3. Exit[/bold red]
+""",
+                title="[bold white]VEHICLE RENTAL SYSTEM[/bold white]",
+                border_style="cyan"
+            )
+        )
 
-1. Customer Register
-2. Customer Login
-3. Exit
-
-==================================================
-""")
-
-        choice = input("Enter Your Choice: ")
+        choice = console.input(
+            "[bold bright_yellow]Enter Your Choice: [/bold bright_yellow]"
+        )
 
         if choice == "1":
 
@@ -32,14 +39,23 @@ def main():
 
         elif choice == "3":
 
-            print("\nThank You for Using Vehicle Rental System!")
-            print("Visit Again...\n")
+            console.print(
+                "\n[bold green]Thank You for Using Vehicle Rental System![/bold green]"
+            )
+
+            console.print(
+                "[bold cyan]Visit Again...[/bold cyan]\n"
+            )
+
             break
 
         else:
 
-            print("\nInvalid Choice! Please Try Again.\n")
+            console.print(
+                "\n[bold red]Invalid Choice! Please Try Again.[/bold red]\n"
+            )
 
 
 if __name__ == "__main__":
     main()
+
