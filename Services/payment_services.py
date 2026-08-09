@@ -1,5 +1,5 @@
 from datetime import date
-from DATABASE.db_conn import get_connection
+from db_conn import conn,cursor
 from rich.console import Console
 from rich.table import Table
 
@@ -9,8 +9,6 @@ class PaymentService:
 
     @staticmethod
     def make_payment(rental_id, payment_method=None, payment_status='Paid'):
-        conn = get_connection()
-        cursor = conn.cursor()
 
         try:
             cursor.execute("SELECT total_amount FROM rental WHERE rental_id = %s", (rental_id,))
@@ -54,8 +52,7 @@ class PaymentService:
 
     @staticmethod
     def view_payment(rental_id):
-        conn = get_connection()
-        cursor = conn.cursor()
+        
         try:
             query = "SELECT * FROM payment WHERE rental_id = %s"
             cursor.execute(query, (rental_id,))
@@ -88,8 +85,7 @@ class PaymentService:
 
     @staticmethod
     def payment_history(customer_id=None):
-        conn = get_connection()
-        cursor = conn.cursor()
+        
         try:
             if customer_id:
                 query = """
