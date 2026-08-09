@@ -74,7 +74,7 @@ class PaymentService:
             table.add_column("Status", style="bold green")
 
             for row in payments:
-                # 0: payment_id, 1: rental_id, 2: payment_date, 3: amount, 4: payment_method, 5: payment_status
+               
                 method_display = row[4] if row[4] else "N/A"
                 table.add_row(str(row[0]), str(row[1]), str(row[2]), f"₹{row[3]}", method_display, str(row[5]))
 
