@@ -6,8 +6,8 @@ console = Console()
 conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="12345",
-    database="vehicle_rental_system"
+    password="swanandi",
+    database="python45"
 )
 
 cursor = conn.cursor()

@@ -1,0 +1,426 @@
+from db_conn import conn,cursor
+from Models.rental import rental
+from Models.payment import Payment
+from datetime import date
+
+
+
+
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from datetime import datetime
+
+console = Console()
+ 
+ 
+#---------------- RENT VEHICLE ---------------- #
+ 
+
+ 
+def rent_vehicle(customer_id):
+
+   console.print(Panel.fit("[bold cyan]RENT VEHICLE[/bold cyan]"))
+   vehicle_id = int(input("Enter Vehicle ID: "))
+   rent_date = input("Enter Rent Date (YYYY-MM-DD): ")
+   return_date = input("Enter Return Date (YYYY-MM-DD): ")
+   rent_date_obj=date.fromisoformat(rent_date)
+   return_date_obj=date.fromisoformat(return_date)
+   total_days=(return_date_obj-rent_date_obj).days
+   console.print("Total Days :",total_days)
+    
+    
+   if total_days <= 0:
+       console.print("❌ Number of days must be greater than 0.", style="bold red")
+       return
+   #Check vehicle availability
+   query = """
+   SELECT rent_per_day
+   FROM vehicle
+   WHERE vehicle_id=%s
+   AND status='Available'
+   """
+   cursor.execute(query, (vehicle_id,))
+   vehicle = cursor.fetchone()
+   if vehicle is None:
+        console.print("❌ Vehicle is not available!", style="bold red")
+        return
+   rent_per_day = float(vehicle[0])
+   total_amount = rent_per_day * total_days
+
+   console.print(f"\nTotal Amount to Pay : ₹{total_amount}", style="bold yellow")
+   payment_method = input("Enter Payment Method (Cash/UPI/Card): ")
+
+   #Create rental object
+   rental1 = rental(
+       customer_id,
+       vehicle_id,
+       rent_date,
+       return_date,
+       total_days,
+       total_amount,
+       "Active"
+   )
+   rental_query = """
+   INSERT INTO rental
+   (customer_id, vehicle_id, rent_date,
+   return_date, total_days,
+   total_amount, rental_status)
+   VALUES (%s,%s,%s,%s,%s,%s,%s)
+   """
+
+   rental_values = (
+       rental1.customer_id,
+       rental1.vehicle_id,
+       rental1.rent_date,
+       rental1.return_date,
+       rental1.total_days,
+       rental1.total_amount,
+       rental1.rental_status)
+
+   cursor.execute(rental_query, rental_values)
+
+   #Get generated Rental ID
+   rental_id = cursor.lastrowid
+   #Create payment object
+   payment = Payment(
+       rental_id,
+       date.today(),
+       total_amount,
+       payment_method,
+       "Paid"
+    )
+   payment_query = """
+   INSERT INTO payment
+   (rental_id, payment_date, amount,
+    payment_method, payment_status)
+   VALUES (%s,%s,%s,%s,%s)
+   """
+   payment_values = (
+       payment.rental_id,
+       payment.payment_date,
+       payment.amount,
+       payment.payment_method,
+       payment.payment_status
+    )
+   cursor.execute(payment_query, payment_values)
+   #Update vehicle status
+   cursor.execute(
+       """
+       UPDATE vehicle
+       SET status='Rented'
+       WHERE vehicle_id=%s
+       """,
+       (vehicle_id,)
+    )
+   conn.commit()
+
+   console.print(
+       Panel.fit(
+           f"""
+[bold green]Vehicle Rented Successfully![/bold green]
+
+Rental ID      : {rental_id}
+Vehicle ID     : {vehicle_id}
+Amount Paid    : ₹{total_amount}
+Payment Method : {payment_method}
+Payment Status : Paid
+""",
+            title="Rental Receipt",
+             border_style="green"
+         )
+     )
+
+ 
+#---------------- VIEW MY RENTALS ---------------- #
+ 
+def view_my_rentals(customer_id):
+ 
+    query = """
+    SELECT
+        r.rental_id,
+        v.brand,
+        v.model,
+        r.rent_date,
+        r.return_date,
+        r.total_days,
+        r.total_amount,
+        r.rental_status
+    FROM rental r
+    JOIN vehicle v
+    ON r.vehicle_id = v.vehicle_id
+    WHERE r.customer_id=%s
+    """
+ 
+    cursor.execute(query, (customer_id,))
+    rentals = cursor.fetchall() 
+    if not rentals:
+        console.print("❌ No Rental Records Found!", style="bold red")
+        return 
+    table = Table(title="My Rentals")
+ 
+    table.add_column("Rental ID")
+    table.add_column("Brand")
+    table.add_column("Model")
+    table.add_column("Rent Date")
+    table.add_column("Return Date")
+    table.add_column("Days")
+    table.add_column("Amount")
+    table.add_column("Status")
+
+    for r in rentals:
+ 
+        table.add_row(
+            str(r[0]),
+            r[1],
+            r[2],
+            str(r[3]),
+            str(r[4]),
+            str(r[5]),
+            str(r[6]),
+            r[7]
+        )
+ 
+    console.print(table)
+
+#---------------------View All Rentals-------------------- #admin
+def view_all_rental():
+
+    query = """
+    SELECT
+        r.rental_id,
+        c.customer_name,
+        v.brand,
+        v.model,
+        r.rent_date,
+        r.return_date,
+        r.total_days,
+        r.total_amount,
+        r.rental_status
+    FROM rental r
+    JOIN customer c
+        ON r.customer_id = c.customer_id
+    JOIN vehicle v
+        ON r.vehicle_id = v.vehicle_id
+    """
+
+    cursor.execute(query)
+
+    rentals = cursor.fetchall()
+
+    if not rentals:
+        console.print("❌ No Rental Records Found!", style="bold red")
+        return
+
+    table = Table(title="All Rentals")
+
+    table.add_column("Rental ID", style="cyan")
+    table.add_column("Customer", style="green")
+    table.add_column("Brand")
+    table.add_column("Model")
+    table.add_column("Rent Date")
+    table.add_column("Return Date")
+    table.add_column("Days")
+    table.add_column("Amount")
+    table.add_column("Status")
+
+    for r in rentals:
+
+        table.add_row(
+            str(r[0]),
+            r[1],
+            r[2],
+            r[3],
+            str(r[4]),
+            str(r[5]),
+            str(r[6]),
+            f"₹{r[7]}",
+            r[8]
+        )
+
+    console.print(table)
+
+
+
+ 
+ 
+ 
+#---------------- RETURN VEHICLE ---------------- #
+ 
+def return_vehicle(customer_id):
+   
+ 
+   rental_id = int(input("Enter Rental ID: "))
+   query = """
+   SELECT vehicle_id
+   FROM rental
+   WHERE rental_id=%s
+   AND customer_id=%s
+   AND rental_status='Active'
+   """
+   cursor.execute(query, (rental_id, customer_id))
+   rental = cursor.fetchone()
+   if rental is None:
+    console.print("❌ Rental Record Not Found!", style="bold red")
+    return
+   vehicle_id = rental[0]
+   today = datetime.today().strftime("%Y-%m-%d")
+   cursor.execute("""
+   UPDATE rental
+   SET return_date=%s,
+      rental_status='Completed'
+    WHERE rental_id=%s
+    """, (today, rental_id))
+   cursor.execute("""
+   UPDATE vehicle
+   SET status='Available'
+   WHERE vehicle_id=%s
+   """, (vehicle_id,))
+   conn.commit()
+   console.print("✅ Vehicle Returned Successfully!", style="bold green")
+
+
+
+#-------------------------------Search Rental------------------------ #admin
+def search_rental():
+    while True:
+        console.print(Panel.fit("[bold cycan]Search Reantal[/bold cyan]"))
+        console.print("\n1.Search by Rental ID\n2.Search By Customer name\n3.Search by Vehicle Registration No\n4.Search by Rental Status\n5.Back")
+        ch=int(input("enter your choice:"))
+        match ch :
+            case 1:
+                rental_id=int(input("enter rental ID:"))
+                query = """
+                    SELECT
+                        r.rental_id,
+                        c.customer_name,
+                        v.brand,
+                        v.model,
+                        r.rent_date,
+                        r.return_date,
+                        r.total_days,
+                        r.total_amount,
+                        r.rental_status
+                    FROM rental r
+                    JOIN customer c
+                        ON r.customer_id = c.customer_id
+                    JOIN vehicle v
+                        ON r.vehicle_id = v.vehicle_id
+                        WHERE r.rental_id=%s
+                    """
+                cursor.execute(query,(rental_id,))
+                rentals=cursor.fetchall()
+
+            case 2:
+                name=input("enter Customer Name:")
+                query = """
+                    SELECT
+                        r.rental_id,
+                        c.customer_name,
+                        v.brand,
+                        v.model,
+                        v.registration_no,
+                        r.rent_date,
+                        r.return_date,
+                        r.total_days,
+                        r.total_amount,
+                        r.rental_status
+                    FROM rental r
+                    JOIN customer c
+                        ON r.customer_id = c.customer_id
+                    JOIN vehicle v
+                        ON r.vehicle_id = v.vehicle_id
+                    WHERE c.customer_name= %s
+                    """
+                cursor.execute(query,(name,))
+                rentals=cursor.fetchall()
+            case 3:
+                regiatration_no=input("enter Registration NO:")
+                query = """
+                    SELECT
+                        r.rental_id,
+                        c.customer_name,
+                        v.brand,
+                        v.model,
+                        v.registration_no,
+                        r.rent_date,
+                        r.return_date,
+                        r.total_days,
+                        r.total_amount,
+                        r.rental_status
+                    FROM rental r
+                    JOIN customer c
+                        ON r.customer_id = c.customer_id
+                    JOIN vehicle v
+                        ON r.vehicle_id = v.vehicle_id
+                    WHERE v.registartion_no=%s
+                    """
+                cursor.execute(query,(regiatration_no,))
+                rentals=cursor.fetchall()
+            case 4:
+                status=input("enter status(Active/Completed):")
+                query = """
+                    SELECT
+                        r.rental_id,
+                        c.customer_name,
+                        v.brand,
+                        v.model,
+                        v.registration_no,
+                        r.rent_date,
+                        r.return_date,
+                        r.total_days,
+                        r.total_amount,
+                        r.rental_status
+                    FROM rental r
+                    JOIN customer c
+                        ON r.customer_id = c.customer_id
+                    JOIN vehicle v
+                        ON r.vehicle_id = v.vehicle_id
+                    WHERE c.rental_status=%s
+                    """
+                cursor.execute(query,(status,))
+                rentals=cursor.fetchall()
+
+            case 5:
+                break
+            case _:
+                console.print("❌ Invalid Choice!", style="bold red")
+                continue
+
+        if not rentals:
+            console.print("❌ No Rental Records Found!", style="bold red")
+            continue
+
+        table = Table(title="Rental Details")
+
+        table.add_column("Rental ID", style="cyan")
+        table.add_column("Customer", style="green")
+        table.add_column("Brand")
+        table.add_column("Model")
+        table.add_column("Registration No")
+        table.add_column("Rent Date")
+        table.add_column("Return Date")
+        table.add_column("Days")
+        table.add_column("Amount")
+        table.add_column("Status")
+
+        for r in rentals:
+            table.add_row(
+                str(r[0]),
+                r[1],
+                r[2],
+                r[3],
+                r[4],
+                str(r[5]),
+                str(r[6]),
+                str(r[7]),
+                f"₹{r[8]}",
+                r[9]
+            )
+
+        console.print(table)
+            
+
+            
+
+            
