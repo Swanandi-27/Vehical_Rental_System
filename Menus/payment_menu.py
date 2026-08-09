@@ -1,6 +1,6 @@
 
 
-from SERVICES.payment_services import PaymentService
+from Services.payment_services import PaymentService
 from rich.console import Console
 
 console = Console()
