@@ -1,6 +1,6 @@
 
 
-from Services.payment_services import PaymentService
+from Services.payment_services import *
 from rich.console import Console
 
 console = Console()
@@ -27,13 +27,13 @@ def user_payment_menu(customer_id):
                 m_choice = input("Enter choice (1-4): ").strip()
 
                 if m_choice == '1':
-                    PaymentService.make_payment(rental_id, payment_method='Cash', payment_status='Paid')
+                    make_payment(rental_id, payment_method='Cash', payment_status='Paid')
                 elif m_choice == '2':
-                    PaymentService.make_payment(rental_id, payment_method='UPI', payment_status='Paid')
+                    make_payment(rental_id, payment_method='UPI', payment_status='Paid')
                 elif m_choice == '3':
-                    PaymentService.make_payment(rental_id, payment_method='Card', payment_status='Paid')
+                    make_payment(rental_id, payment_method='Card', payment_status='Paid')
                 elif m_choice == '4':
-                    PaymentService.make_payment(rental_id, payment_method=None, payment_status='Pending')
+                    make_payment(rental_id, payment_method=None, payment_status='Pending')
                 else:
                     console.print("[red]Invalid payment method selected![/red]")
 
@@ -43,12 +43,12 @@ def user_payment_menu(customer_id):
         elif choice == '2':
             try:
                 rental_id = int(input("Enter Rental ID: "))
-                PaymentService.view_payment(rental_id)
+                view_payment(rental_id)
             except ValueError:
                 console.print("[red]Invalid Rental ID![/red]")
 
         elif choice == '3':
-            PaymentService.payment_history(customer_id)
+            payment_history(customer_id)
 
         elif choice == '4':
             break
@@ -59,49 +59,26 @@ def user_payment_menu(customer_id):
 def admin_payment_menu():
     while True:
         console.print("\n[bold magenta]=== ADMIN PAYMENT MENU ===[/bold magenta]")
-        console.print("1. Make Payment")
-        console.print("2. View Specific Payment Details")
-        console.print("3. View All Payment History")
-        console.print("4. Back to Admin Menu")
+        console.print("1. View Specific Payment Details")
+        console.print("2. View All Payment History")
+        console.print("3. Back to Admin Menu")
         
-        choice = input("Enter choice (1-4): ").strip()
+        choice = input("Enter choice (1-3): ").strip()
+
+        
+             
 
         if choice == '1':
             try:
                 rental_id = int(input("Enter Rental ID: "))
-                
-                console.print("\nSelect Payment Method:")
-                console.print("1. Cash")
-                console.print("2. UPI")
-                console.print("3. Card")
-                console.print("4. Cancel")
-                m_choice = input("Enter choice (1-4): ").strip()
-                
-                if m_choice == '1':
-                    PaymentService.make_payment(rental_id, payment_method='Cash', payment_status='Paid')
-                elif m_choice == '2':
-                    PaymentService.make_payment(rental_id, payment_method='UPI', payment_status='Paid')
-                elif m_choice == '3':
-                    PaymentService.make_payment(rental_id, payment_method='Card', payment_status='Paid')
-                elif m_choice == '4':
-                    PaymentService.make_payment(rental_id, payment_method=None, payment_status='Pending')
-                else:
-                    console.print("[red]Invalid payment method selected![/red]")
-
-            except ValueError:
-                console.print("[red]Invalid input! Please enter a valid number for Rental ID.[/red]")
-
-        elif choice == '2':
-            try:
-                rental_id = int(input("Enter Rental ID: "))
-                PaymentService.view_payment(rental_id)
+                view_payment(rental_id)
             except ValueError:
                 console.print("[red]Invalid Rental ID![/red]")
 
-        elif choice == '3':
-            PaymentService.payment_history()
+        elif choice == '2':
+            payment_history()
 
-        elif choice == '4':
+        elif choice == '3':
             break
         else:
             console.print("[red]Invalid choice, try again.[/red]")

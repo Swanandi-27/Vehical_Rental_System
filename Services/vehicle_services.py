@@ -178,19 +178,23 @@ def delete_vehicle():
 
 
 def view_available_vehicle():
-    query="""
-    select vehicle_id,
-    vehicle_type,
-    brand,
-    model,
-    registration_no,
-    rent_per_day
-    from vehicle 
-    where status = 'Available'
-        """
+
+    query = """
+        SELECT vehicle_id,
+               vehicle_type,
+               brand,
+               model,
+               registration_no,
+               rent_per_day,
+               status
+        FROM vehicle
+        WHERE status = 'Available'
+    """
 
     cursor.execute(query)
-    vehicles=cursor.fetchall()
+
+    vehicles = cursor.fetchall()
+
     display_vehicles(vehicles)
 
 def Search_vehicle():  
@@ -294,7 +298,7 @@ def display_vehicles(vehicles):
                 vehicle[2],
                 vehicle[3],
                 vehicle[4],
-                f"₹{vehicle[5]:.2f}",
+                str(vehicle[5]),
                 vehicle[6]
             )
 

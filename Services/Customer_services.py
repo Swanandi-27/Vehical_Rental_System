@@ -18,59 +18,36 @@ def register_customer():
         )
     )
 
-    name = console.input(
-        "[bold yellow]Enter Customer Name : [/bold yellow]"
-    )
+    customer_name=input("enter customer Name:")
+    phone=input("enter your phonne no:")
+    email=input("enter your email ID:")
+    password=input("enter password")
+    
+    has_license = input("Do you have a valid driving license? (Y/N): ")
 
-    username = console.input(
-        "[bold yellow]Enter Username      : [/bold yellow]"
-    )
+    if has_license.upper() == "Y":
+        license_no = input("Enter Driving License Number: ")
+        
+    else:
+        console.print("❌ Registration Failed! Driving license is mandatory.",style="red")
 
-    phone = console.input(
-        "[bold yellow]Enter Phone Number  : [/bold yellow]"
-    )
+    addres=input("enter your address")
+    
 
-    email = console.input(
-        "[bold yellow]Enter Email         : [/bold yellow]"
-    )
-
-    password = console.input(
-        "[bold yellow]Enter Password      : [/bold yellow]"
-    )
-
-    license_no = console.input(
-        "[bold yellow]Enter License No    : [/bold yellow]"
-    )
-
-    address = console.input(
-        "[bold yellow]Enter Address       : [/bold yellow]"
-    )
-
-    customer = Customer(
-        None,
-        name,
-        username,
-        phone,
-        email,
-        password,
-        license_no,
-        address
-    )
-
-    cursor.execute("""
+    query="""
         INSERT INTO customer
-        (customer_name, username, phone, email, password, license_no, address)
-        VALUES(%s,%s,%s,%s,%s,%s,%s)
-    """, customer.get_data())
+        (customer_name, phone, email, password, license_no, address)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+    values=(customer_name,phone,email,password,license_no,addres)
+    cursor.execute(query,values)
+    conn.commit ()
+    console.print("✅ Customer Registered Sucessfully",style='green')
+    console.print("➡ Please Login to continue.", style="Italic blue")
+    return customer_login()
 
-    conn.commit()
 
-    console.print(
-        Panel(
-            "[bold green]✓ Customer Registered Successfully![/bold green]",
-            border_style="green"
-        )
-    )
+    
 
 
 #customer login
@@ -85,7 +62,7 @@ def customer_login():
     )
 
     username = console.input(
-        "[bold yellow]Enter Username : [/bold yellow]"
+        "[bold yellow]Enter Email : [/bold yellow]"
     )
 
     password = console.input(
@@ -95,7 +72,7 @@ def customer_login():
     cursor.execute("""
         SELECT customer_id
         FROM customer
-        WHERE username=%s AND password=%s
+        WHERE email=%s AND password=%s
     """, (username, password))
 
     customer = cursor.fetchone()
@@ -116,7 +93,7 @@ def customer_login():
 
         console.print(
             Panel(
-                "[bold red]✗ Invalid Username or Password.[/bold red]",
+                "[bold red]✗ Invalid Email or Password.[/bold red]",
                 border_style="red"
             )
         )
@@ -152,7 +129,7 @@ def view_customers():
 
     table.add_column("ID", style="bold cyan")
     table.add_column("Name", style="bold yellow")
-    table.add_column("Username", style="bold green")
+    
     table.add_column("Phone", style="bold magenta")
     table.add_column("Email", style="bold blue")
     table.add_column("Password", style="bold red")
@@ -163,13 +140,13 @@ def view_customers():
 
         table.add_row(
             str(c[0]),
-            str(c[1]),
-            str(c[2]),
-            str(c[3]),
-            str(c[4]),
-            str(c[5]),
-            str(c[6]),
-            str(c[7])
+            c[1],
+            c[2],
+            c[3],
+            c[4],
+            c[5],
+            c[6]
+        
         )
 
     console.print(table)
@@ -269,7 +246,7 @@ def search_customer():
 
             table.add_column("ID", style="bold cyan")
             table.add_column("Name", style="bold yellow")
-            table.add_column("Username", style="bold green")
+           
             table.add_column("Phone", style="bold magenta")
             table.add_column("Email", style="bold blue")
             table.add_column("Password", style="bold red")
@@ -280,13 +257,13 @@ def search_customer():
 
                 table.add_row(
                     str(c[0]),
-                    str(c[1]),
-                    str(c[2]),
-                    str(c[3]),
-                    str(c[4]),
-                    str(c[5]),
-                    str(c[6]),
-                    str(c[7])
+                    c[1],
+                    c[2],
+                    c[3],
+                    c[4],
+                    c[5],
+                    c[6]
+                    
                 )
 
             console.print(table)
@@ -557,12 +534,12 @@ def view_profile(customer_id):
 
         table.add_row("Customer ID", str(data[0]))
         table.add_row("Customer Name", str(data[1]))
-        table.add_row("Username", str(data[2]))
-        table.add_row("Phone", str(data[3]))
-        table.add_row("Email", str(data[4]))
-        table.add_row("Password", str(data[5]))
-        table.add_row("License No", str(data[6]))
-        table.add_row("Address", str(data[7]))
+        
+        table.add_row("Phone", str(data[2]))
+        table.add_row("Email", str(data[3]))
+        table.add_row("Password", str(data[4]))
+        table.add_row("License No", str(data[5]))
+        table.add_row("Address", str(data[6]))
 
         console.print(table)
 

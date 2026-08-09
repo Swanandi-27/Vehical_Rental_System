@@ -9,7 +9,7 @@ console = Console()
 
     
 def make_payment(rental_id, payment_method=None, payment_status='Paid'):
-    try:
+    
         cursor.execute("SELECT total_amount FROM rental WHERE rental_id = %s", (rental_id,))
         rental = cursor.fetchone()
         if not rental:
@@ -35,17 +35,11 @@ def make_payment(rental_id, payment_method=None, payment_status='Paid'):
         
         console.print(f"[green]Payment of ₹{amount} completed successfully via {payment_method}![/green]")
         return True
-    except Exception as e:
-        conn.rollback()
-        console.print(f"[red]Payment failed: {e}[/red]")
-        return False
-    finally:
-        cursor.close()
-        conn.close()
+    
 
 def view_payment(rental_id):
     
-    try:
+    
         query = "SELECT * FROM payment WHERE rental_id = %s"
         cursor.execute(query, (rental_id,))
         payments = cursor.fetchall()
@@ -64,15 +58,11 @@ def view_payment(rental_id):
             method_display = row[4] if row[4] else "N/A"
             table.add_row(str(row[0]), str(row[1]), str(row[2]), f"₹{row[3]}", method_display, str(row[5]))
         console.print(table)
-    except Exception as e:
-        console.print(f"[red]Error fetching payment details: {e}[/red]")
-    finally:
-        cursor.close()
-        conn.close()
+    
 
 def payment_history(customer_id=None):
     
-    try:
+    
         if customer_id:
             query = """
                 SELECT p.payment_id, p.rental_id, p.payment_date, p.amount, p.payment_method, p.payment_status
@@ -102,8 +92,4 @@ def payment_history(customer_id=None):
             method_display = row[4] if row[4] else "N/A"
             table.add_row(str(row[0]), str(row[1]), str(row[2]), f"₹{row[3]}", method_display, str(row[5]))
         console.print(table)
-    except Exception as e:
-        console.print(f"[red]Error getting payment history: {e}[/red]")
-    finally:
-        cursor.close()
-        conn.close()
+    
